@@ -1,124 +1,117 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Sun, Calendar, Star, Inbox, Search, Settings, HelpCircle, User } from "lucide-react"
-
+import * as React from "react";
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarGroup,
-    SidebarGroupLabel,
-    SidebarGroupContent,
-    SidebarTrigger,
-    SidebarRail,
-    SidebarSeparator,
-} from "@/components/ui/sidebar"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const items = [
-    {
-        title: "My Day",
-        url: "#",
-        icon: Sun,
-    },
-    {
-        title: "Important",
-        url: "#",
-        icon: Star,
-    },
-    {
-        title: "Planned",
-        url: "#",
-        icon: Calendar,
-    },
-    {
-        title: "Tasks",
-        url: "#",
-        icon: Inbox,
-    },
-]
+const navItems = [
+  { title: "My Day", icon: "wb_sunny", color: "text-salmon", active: true },
+  { title: "Projects", icon: "work", color: "text-indigo-400" },
+  { title: "Family", icon: "family_history", color: "text-teal-500" },
+  { title: "Email", icon: "mail", color: "text-pink-400" },
+  { title: "Notes", icon: "sticky_note_2", color: "text-amber-400" },
+];
 
 export function AppSidebar() {
-    return (
-        <Sidebar collapsible="icon" className="border-r">
-            <SidebarHeader className="p-4">
-                <div className="flex items-center justify-between gap-2 px-2">
-                    <div className="flex items-center gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                            <User className="h-5 w-5" />
-                        </div>
-                        <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-                            <span className="font-semibold text-sidebar-foreground">Assist Me</span>
-                            <span className="text-xs text-sidebar-foreground/60">Personal Assistant</span>
-                        </div>
-                    </div>
-                    <SidebarTrigger className="-mr-2 h-8 w-8" />
+  return (
+    <Sidebar
+      collapsible="icon"
+      className="w-20 lg:w-64 border-none bg-transparent"
+    >
+      <div className="h-full glass-panel soft-diffused rounded-soft flex flex-col justify-between p-5 transition-all duration-300">
+        <div>
+          <SidebarHeader className="p-0 mb-8">
+            <div className="flex gap-3 items-center px-2">
+              <div className="bg-gradient-to-tr from-salmon to-orange-300 rounded-2xl p-2.5 flex items-center justify-center shadow-lg shadow-salmon/20">
+                <span className="material-symbols-outlined text-white text-xl">
+                  auto_awesome
+                </span>
+              </div>
+              <div className="flex flex-col hidden lg:flex">
+                <h1 className="text-charcoal text-base font-extrabold leading-none">
+                  Assist Me
+                </h1>
+                <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-1">
+                  Personal Companion
+                </p>
+              </div>
+            </div>
+          </SidebarHeader>
+
+          <SidebarContent className="p-0">
+            <SidebarMenu className="gap-2">
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    className={`flex items-center gap-3 px-4 py-6 rounded-inner transition-all cursor-pointer group h-auto ${
+                      item.active
+                        ? "bg-white/60 shadow-sm text-charcoal font-bold"
+                        : "hover:bg-white/30"
+                    }`}
+                  >
+                    <a href="#">
+                      <span
+                        className={`material-symbols-outlined ${item.color} ${!item.active ? "group-hover:scale-110 transition-transform" : ""}`}
+                      >
+                        {item.icon}
+                      </span>
+                      <p className="text-xs font-medium hidden lg:block">
+                        {item.title}
+                      </p>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+        </div>
+
+        <SidebarFooter className="p-0 flex flex-col gap-4">
+          <SidebarMenu className="gap-4">
+            <SidebarMenuItem>
+              <SidebarMenuButton className="flex items-center gap-3 px-4 py-2.5 rounded-inner hover:bg-white/30 transition-all cursor-pointer h-auto">
+                <span className="material-symbols-outlined text-slate-400">
+                  settings
+                </span>
+                <p className="text-xs font-medium text-slate-500 hidden lg:block">
+                  Settings
+                </p>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            <SidebarMenuItem>
+              <div className="flex items-center gap-3 p-2.5 bg-white/40 rounded-inner shadow-sm">
+                <Avatar className="w-10 h-10 border-2 border-white shadow-sm flex-shrink-0">
+                  <AvatarImage
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwHnkATN7__UFgp8g9-4LWFqrFP_lol5jJ9AZblovetDq-LtLBaOPx6k3GniM59TZeoUpb5pdglYVmo_-8wzdSwjHJd972zTWj1dzZZMi27q6WcEIszc5RfSQ6abBqkL_rKmQ5PkthgWHXY2illJlcDWXvyLuFKpL2OOkfBAnJtXVtfgbzV8GKp8M1udDfvEaQR64zToAMpyhW4ENR9Gls5k7vpRILKOS8-UWnVsRSi3F5i4D_LnCrym8ne-F3CMnIb5KhBBFzEr0"
+                    alt="Alex Johnson"
+                  />
+                  <AvatarFallback className="bg-salmon text-white text-[10px] font-black">
+                    AJ
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col overflow-hidden hidden lg:flex">
+                  <p className="text-xs font-bold text-charcoal truncate">
+                    Alex Johnson
+                  </p>
+                  <p className="text-[9px] text-salmon font-bold uppercase">
+                    Gold Member
+                  </p>
                 </div>
-            </SidebarHeader>
-            <SidebarContent>
-                <SidebarGroup>
-                    <SidebarSeparator />
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            {items.map((item) => (
-                                <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton asChild tooltip={item.title}>
-                                        <a href={item.url}>
-                                            <item.icon className="h-4 w-4" />
-                                            <span>{item.title}</span>
-                                        </a>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-            </SidebarContent>
-            <SidebarFooter className="p-4">
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <SidebarMenuButton>
-                                    <Settings className="h-4 w-4" />
-                                    <span>Settings</span>
-                                </SidebarMenuButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                side="top"
-                                className="w-[--radix-popper-anchor-width]"
-                            >
-                                <DropdownMenuItem>
-                                    <span>Account</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                    <span>Preferences</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                    <span>Sign out</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton>
-                            <HelpCircle className="h-4 w-4" />
-                            <span>Help & Support</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarFooter>
-            <SidebarRail />
-        </Sidebar>
-    )
+              </div>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </div>
+    </Sidebar>
+  );
 }
