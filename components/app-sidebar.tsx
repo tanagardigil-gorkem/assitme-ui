@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarContent,
@@ -13,14 +15,21 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const navItems = [
-  { title: "My Day", icon: "wb_sunny", color: "text-salmon", active: true },
-  { title: "Projects", icon: "work", color: "text-indigo-400" },
-  { title: "Family", icon: "family_history", color: "text-teal-500" },
-  { title: "Email", icon: "mail", color: "text-pink-400" },
-  { title: "Notes", icon: "sticky_note_2", color: "text-amber-400" },
+  { title: "My Day", icon: "wb_sunny", color: "text-salmon", href: "/" },
+  {
+    title: "Integrations",
+    icon: "hub",
+    color: "text-indigo-400",
+    href: "/connections",
+  },
+  { title: "Projects", icon: "work", color: "text-indigo-400", href: "#" },
+  { title: "Family", icon: "family_history", color: "text-teal-500", href: "#" },
+  { title: "Email", icon: "mail", color: "text-pink-400", href: "#" },
+  { title: "Notes", icon: "sticky_note_2", color: "text-amber-400", href: "#" },
 ];
 
 export function AppSidebar() {
+  const pathname = usePathname();
   return (
     <Sidebar
       collapsible="icon"
@@ -48,29 +57,35 @@ export function AppSidebar() {
 
           <SidebarContent className="p-0">
             <SidebarMenu className="gap-2">
-              {navItems.map((item) => (
+              {navItems.map((item) => {
+                const isActive =
+                  item.href !== "#" &&
+                  (pathname === item.href ||
+                    (item.href !== "/" && pathname.startsWith(item.href)));
+
+                return (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     className={`flex items-center gap-3 px-4 py-6 rounded-inner transition-all cursor-pointer group h-auto ${
-                      item.active
+                      isActive
                         ? "bg-white/60 shadow-sm text-charcoal font-bold"
                         : "hover:bg-white/30"
                     }`}
                   >
-                    <a href="#">
+                    <Link href={item.href}>
                       <span
-                        className={`material-symbols-outlined ${item.color} ${!item.active ? "group-hover:scale-110 transition-transform" : ""}`}
+                        className={`material-symbols-outlined ${item.color} ${!isActive ? "group-hover:scale-110 transition-transform" : ""}`}
                       >
                         {item.icon}
                       </span>
                       <p className="text-xs font-medium hidden lg:block">
                         {item.title}
                       </p>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+              )})}
             </SidebarMenu>
           </SidebarContent>
         </div>
