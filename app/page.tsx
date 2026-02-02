@@ -1,17 +1,48 @@
-import * as React from "react";
+"use client";
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useMorningDashboard } from "@/hooks/use-morning-dashboard";
+
+function getGreeting(name: string): string {
+  const hour = new Date().getHours();
+  if (hour < 12) {
+    return `Good Morning, ${name}!`;
+  } else if (hour < 18) {
+    return `Good Afternoon, ${name}!`;
+  } else if (hour < 22) {
+    return `Good Evening, ${name}!`;
+  } else {
+    return `Good Night, ${name}!`;
+  }
+}
 
 export default function Home() {
+  const { data, loading, error } = useMorningDashboard(3);
+
+  const greeting = getGreeting("Gorkem");
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-500">
+        <span className="material-symbols-outlined text-4xl">error</span>
+        <p className="font-bold">Failed to load morning updates</p>
+        <p className="text-sm">{error}</p>
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
       {/* Header Section */}
-      <Card className="glass-panel soft-diffused p-8 rounded-soft flex flex-wrap justify-between items-center gap-6 border-none">
-        <div className="flex flex-col gap-4">
+      <Card className="glass-panel soft-diffused p-8 rounded-soft flex flex-col md:flex-row md:justify-between md:items-center gap-6 border-none">
+        <div className="flex flex-col gap-4 flex-1 min-w-0">
           <h2 className="text-charcoal font-friendly text-5xl font-extrabold tracking-tight">
-            Good Morning, Alex!
+            {greeting}
           </h2>
           <div className="flex items-center gap-4">
             <Badge
@@ -19,19 +50,25 @@ export default function Home() {
               className="bg-[#FEF3C7]/60 text-[#D97706] px-5 py-2 rounded-full border-none hover:bg-[#FEF3C7]/80 h-10 transition-colors"
             >
               <span className="material-symbols-outlined text-[#F59E0B] text-xl fill-1 mr-2">
-                light_mode
+                {loading ? "sync" : "light_mode"}
               </span>
               <span className="text-xs font-bold uppercase tracking-wide">
-                72°F & Sunny
+                {loading
+                  ? "Loading..."
+                  : data?.weather?.current?.temp_c !== undefined
+                    ? `${data.weather.current.temp_c}°C & ${data.weather.current.condition_text ?? "Sunny"}`
+                    : "Weather Unavailable"}
               </span>
             </Badge>
             <p className="text-[#64748B] text-sm font-semibold tracking-tight">
-              Let&apos;s make today absolutely wonderful.
+              {loading
+                ? "Hang tight, personalizing your day..."
+                : data?.mood?.affirmation || "Let's make today absolutely wonderful."}
             </p>
           </div>
         </div>
 
-        <div className="bg-white/60 backdrop-blur-md p-6 rounded-[24px] shadow-sm max-w-[320px] relative overflow-hidden group border border-white/40">
+        <div className="bg-white/60 backdrop-blur-md px-6 py-4 rounded-[24px] shadow-sm md:max-w-[360px] w-full md:w-auto relative overflow-hidden group border border-white/40 md:self-center shrink-0">
           <div className="absolute -right-1 -top-2 opacity-[0.08] group-hover:rotate-6 transition-transform">
             <span className="material-symbols-outlined text-8xl text-salmon font-light">
               format_quote
@@ -44,7 +81,9 @@ export default function Home() {
               </span>
             </div>
             <p className="text-slate-600 text-[13px] font-semibold italic leading-relaxed pr-4">
-              &quot;Focus on what brings you joy today.&quot;
+              {loading
+                ? "Getting your morning focus..."
+                : `"${data?.mood?.affirmation ?? "Focus on what brings you joy today."}"`}
             </p>
           </div>
         </div>
@@ -215,49 +254,56 @@ export default function Home() {
             </span>
           </div>
           <div className="p-6 flex flex-col gap-6 flex-1">
-            {[
-              {
-                category: "Tech Today",
-                title: "New AI breakthroughs in personal agents.",
-                time: "2m read • Now",
-                color: "bg-blue-400",
-                text: "text-blue-500",
-              },
-              {
-                category: "Wellness",
-                title: "5 tips for a healthy work-life balance.",
-                time: "5m read • 1h ago",
-                color: "bg-orange-400",
-                text: "text-orange-500",
-              },
-              {
-                category: "Business",
-                title: "Market trends shifting toward automation.",
-                time: "3m read • 3h ago",
-                color: "bg-teal-400",
-                text: "text-teal-600",
-              },
-            ].map((post, i) => (
-              <div
-                key={i}
-                className={`flex flex-col gap-1.5 ${i < 2 ? "border-b border-white/20 pb-4" : ""}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`w-2 h-2 rounded-full ${post.color}`}></span>
-                  <p
-                    className={`text-[9px] font-black ${post.text} uppercase tracking-widest`}
-                  >
-                    {post.category}
-                  </p>
-                </div>
-                <p className="text-sm font-bold leading-snug text-slate-700">
-                  {post.title}
-                </p>
-                <p className="text-[10px] text-slate-400 font-medium">
-                  {post.time}
-                </p>
+            {loading ? (
+              <div className="flex flex-col gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse flex flex-col gap-2">
+                    <div className="h-2 w-16 bg-slate-200 rounded"></div>
+                    <div className="h-4 w-full bg-slate-200 rounded"></div>
+                    <div className="h-2 w-24 bg-slate-200 rounded"></div>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : data?.news && data.news.length > 0 ? (
+              data.news.map((item, i) => (
+                <div
+                  key={i}
+                  className={`flex flex-col gap-1.5 ${i < data.news.length - 1 ? "border-b border-white/20 pb-4" : ""}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                    <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest">
+                      {item.source}
+                    </p>
+                  </div>
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-bold leading-snug text-slate-700 hover:text-indigo-600 transition-colors"
+                  >
+                    {item.headline}
+                  </a>
+                  {item.summary && (
+                    <p className="text-[10px] text-slate-500 font-medium line-clamp-2">
+                      {item.summary}
+                    </p>
+                  )}
+                  {item.published_at && (
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      {new Date(item.published_at).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400 text-center py-8">
+                No news items available right now.
+              </p>
+            )}
             <Button
               variant="secondary"
               className="w-full py-6 bg-white/60 shadow-sm rounded-inner text-[11px] font-black text-charcoal hover:bg-white hover:shadow-md transition-all flex items-center justify-center gap-2 mt-auto border-none"
@@ -292,7 +338,7 @@ export default function Home() {
                 </h4>
               </div>
               <p className="text-sm font-medium leading-relaxed text-slate-700">
-                Alex, AI suggests a 15-minute walk at 11:00 AM to maintain your
+                Gorkem, AI suggests a 15-minute walk at 11:00 AM to maintain your
                 peak energy levels.
               </p>
             </div>
