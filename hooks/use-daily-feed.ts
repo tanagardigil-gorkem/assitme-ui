@@ -36,15 +36,15 @@ export type MoodBlock = {
   focus_prompt: string;
 };
 
-export type DashboardMorningResponse = {
+export type DailyFeedResponse = {
   generated_at: string; // ISO 8601
   weather: WeatherCurrentResponse;
   news: NewsItem[];
   mood: MoodBlock;
 };
 
-export function useMorningDashboard(limit: number = 10, q?: string) {
-  const [data, setData] = useState<DashboardMorningResponse | null>(null);
+export function useDailyFeed(limit: number = 10, q?: string) {
+  const [data, setData] = useState<DailyFeedResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +80,7 @@ export function useMorningDashboard(limit: number = 10, q?: string) {
 
         const apiBase =
           process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-        const url = `${apiBase}/api/v1/dashboard/morning?${params.toString()}`;
+        const url = `${apiBase}/api/v1/dashboard/daily-feed?${params.toString()}`;
 
         // 3. Fetch Data
         const res = await fetch(url);
@@ -88,7 +88,7 @@ export function useMorningDashboard(limit: number = 10, q?: string) {
           throw new Error(`Failed to fetch dashboard: ${res.status}`);
         }
 
-        const jsonData = (await res.json()) as DashboardMorningResponse;
+        const jsonData = (await res.json()) as DailyFeedResponse;
 
         if (isMounted) {
           setData(jsonData);

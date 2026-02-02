@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useMorningDashboard } from "@/hooks/use-morning-dashboard";
+import { useDailyFeed } from "@/hooks/use-daily-feed";
 
 function getGreeting(name: string): string {
   const hour = new Date().getHours();
@@ -20,7 +20,7 @@ function getGreeting(name: string): string {
 }
 
 export default function Home() {
-  const { data, loading, error } = useMorningDashboard(3);
+  const { data, loading, error } = useDailyFeed(3);
 
   const greeting = getGreeting("Gorkem");
 
@@ -28,7 +28,7 @@ export default function Home() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-500">
         <span className="material-symbols-outlined text-4xl">error</span>
-        <p className="font-bold">Failed to load morning updates</p>
+        <p className="font-bold">Failed to load daily feed</p>
         <p className="text-sm">{error}</p>
         <Button onClick={() => window.location.reload()} variant="outline">
           Try Again
@@ -83,7 +83,7 @@ export default function Home() {
             <p className="text-slate-600 text-[13px] font-semibold italic leading-relaxed pr-4">
               {loading
                 ? "Getting your morning focus..."
-                : `"${data?.mood?.affirmation ?? "Focus on what brings you joy today."}"`}
+                : `"${data?.mood?.focus_prompt ?? "Focus on what brings you joy today."}"`}
             </p>
           </div>
         </div>
