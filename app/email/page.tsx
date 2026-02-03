@@ -172,6 +172,7 @@ export default function EmailPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [reauthBusy, setReauthBusy] = React.useState(false);
   const reauthAttemptedRef = React.useRef(false);
+  const [refreshIndex, setRefreshIndex] = React.useState(0);
 
   const integration = React.useMemo(() => {
     if (!integrations.length) return null;
@@ -353,6 +354,7 @@ export default function EmailPage() {
     pageIndex,
     pageTokens,
     startReauth,
+    refreshIndex,
   ]);
 
   const selectedEmail = React.useMemo(() => {
@@ -506,17 +508,33 @@ export default function EmailPage() {
         ) : null}
 
         <Card className="glass-panel soft-diffused p-4 rounded-soft flex flex-col gap-4 border-none">
-          <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-              search
-            </span>
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search emails..."
-              className="w-full bg-white/40 border-none rounded-inner pl-10 pr-4 py-2 text-xs focus-visible:ring-salmon/20"
-              disabled={integrationUnavailable || loadingIntegration}
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
+                search
+              </span>
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search emails..."
+                className="w-full bg-white/40 border-none rounded-inner pl-10 pr-4 py-2 text-xs focus-visible:ring-salmon/20"
+                disabled={integrationUnavailable || loadingIntegration}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              className="bg-white/70 hover:bg-white"
+              onClick={() => setRefreshIndex((prev) => prev + 1)}
+              disabled={
+                integrationUnavailable || loadingIntegration || loadingEmails
+              }
+            >
+              <span className="material-symbols-outlined text-slate-500 text-lg">
+                sync
+              </span>
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             {FILTERS.map((option) => (
