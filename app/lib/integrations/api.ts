@@ -1,4 +1,9 @@
-import type { AvailableProvider, Integration } from "@/app/lib/types";
+import type {
+  AvailableProvider,
+  EmailFilter,
+  EmailListResponse,
+  Integration,
+} from "@/app/lib/types";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -96,4 +101,46 @@ export async function updateIntegration(
     },
     body: JSON.stringify(update),
   });
+}
+
+export async function getIntegrationEmails(
+  integrationId: string,
+  params: {
+    query?: string;
+    filter?: EmailFilter;
+    label_ids?: string[];
+    max_results?: number;
+    page_token?: string;
+    summarize?: boolean;
+  } = {}
+): Promise<EmailListResponse> {
+  const search = new URLSearchParams();
+
+  if (params.query) {
+    search.set("query", params.query);
+  }
+  if (params.filter) {
+    search.set("filter", params.filter);
+  }
+  if (params.label_ids?.length) {
+    params.label_ids.forEach((label) => {
+      search.append("label_ids", label);
+    });
+  }
+  if (typeof params.max_results === "number") {
+    search.set("max_results", String(params.max_results));
+  }
+  if (params.page_token) {
+    search.set("page_token", params.page_token);
+  }
+  if (typeof params.summarize === "boolean") {
+    search.set("summarize", String(params.summarize));
+  }
+
+  const queryString = search.toString();
+  const path = `/api/v1/integrations/${integrationId}/emails${
+    queryString ? `?${queryString}` : ""
+  }`;
+
+  return requestJson<EmailListResponse>(path);
 }

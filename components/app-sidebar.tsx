@@ -24,7 +24,7 @@ const navItems = [
   },
   { title: "Projects", icon: "work", color: "text-indigo-400", href: "#" },
   { title: "Family", icon: "family_history", color: "text-teal-500", href: "#" },
-  { title: "Email", icon: "mail", color: "text-pink-400", href: "#" },
+  { title: "Email", icon: "mail", color: "text-pink-400", href: "/email" },
   { title: "Notes", icon: "sticky_note_2", color: "text-amber-400", href: "#" },
 ];
 

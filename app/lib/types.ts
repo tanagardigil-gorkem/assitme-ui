@@ -42,3 +42,23 @@ export interface IntegrationCardState {
   status: IntegrationStatus | "disconnected";
   enabled: boolean;
 }
+
+export type EmailFilter = "all" | "unread" | "tasks";
+
+export interface EmailMessage {
+  id: string;
+  thread_id?: string | null;
+  subject?: string | null;
+  from?: string | null;
+  to?: string | null;
+  date?: string | null;
+  snippet?: string | null;
+  body?: string | null;
+  labels?: string[] | null;
+  summary?: string | null;
+}
+
+export interface EmailListResponse {
+  items: EmailMessage[];
+  next_page_token?: string | null;
+}
