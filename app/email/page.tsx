@@ -5,7 +5,16 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
@@ -49,7 +58,7 @@ function parseFrom(value?: string | null) {
   return { name, email };
 }
 
-function formatListDate(value?: string | null) {
+function formatListDateTime(value?: string | null) {
   if (!value) return "Unknown";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "Unknown";
@@ -72,10 +81,11 @@ function formatListDate(value?: string | null) {
       minute: "2-digit",
     }).format(parsed);
   }
-  if (dayDiff === 1) return "Yesterday";
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(parsed);
 }
 
@@ -87,6 +97,23 @@ function formatDetailDate(value?: string | null) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(parsed);
+}
+
+function getIntegrationLabel(
+  integration: Integration,
+  index: number
+): string {
+  const config = (integration.config ?? {}) as Record<string, unknown>;
+  const email =
+    (typeof config.email === "string" && config.email) ||
+    (typeof config.account_email === "string" && config.account_email) ||
+    (typeof config.user_email === "string" && config.user_email) ||
+    null;
+  const provider =
+    integration.provider_type === "gmail"
+      ? "Gmail"
+      : integration.provider_type.replace(/_/g, " ");
+  return email ? `${provider} • ${email}` : `${provider} Account ${index + 1}`;
 }
 
 function plainTextFromBody(value?: string | null) {
@@ -126,7 +153,10 @@ function getErrorMessage(error: unknown) {
 }
 
 export default function EmailPage() {
-  const [integration, setIntegration] = React.useState<Integration | null>(null);
+  const [integrations, setIntegrations] = React.useState<Integration[]>([]);
+  const [activeIntegrationId, setActiveIntegrationId] = React.useState<
+    string | null
+  >(null);
   const [loadingIntegration, setLoadingIntegration] = React.useState(true);
   const [emails, setEmails] = React.useState<EmailMessage[]>([]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -142,6 +172,15 @@ export default function EmailPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [reauthBusy, setReauthBusy] = React.useState(false);
   const reauthAttemptedRef = React.useRef(false);
+
+  const integration = React.useMemo(() => {
+    if (!integrations.length) return null;
+    return (
+      integrations.find((item) => item.id === activeIntegrationId) ??
+      integrations[0] ??
+      null
+    );
+  }, [integrations, activeIntegrationId]);
 
   const config = React.useMemo(() => {
     return (integration?.config ?? {}) as {
@@ -204,9 +243,11 @@ export default function EmailPage() {
     getMyIntegrations()
       .then((items) => {
         if (!alive) return;
-        const gmailIntegration =
-          items.find((item) => item.provider_type === "gmail") ?? null;
-        setIntegration(gmailIntegration);
+        const emailIntegrations = items.filter(
+          (item) => item.provider_type === "gmail"
+        );
+        setIntegrations(emailIntegrations);
+        setActiveIntegrationId((prev) => prev ?? emailIntegrations[0]?.id ?? null);
       })
       .catch((err) => {
         if (!alive) return;
@@ -221,6 +262,20 @@ export default function EmailPage() {
       alive = false;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!integrations.length) {
+      if (activeIntegrationId) setActiveIntegrationId(null);
+      return;
+    }
+    if (!activeIntegrationId) {
+      setActiveIntegrationId(integrations[0]?.id ?? null);
+      return;
+    }
+    if (!integrations.some((item) => item.id === activeIntegrationId)) {
+      setActiveIntegrationId(integrations[0]?.id ?? null);
+    }
+  }, [integrations, activeIntegrationId]);
 
   React.useEffect(() => {
     setPageIndex((prev) => (prev === 0 ? prev : 0));
@@ -345,6 +400,59 @@ export default function EmailPage() {
   return (
     <div className="flex flex-1 gap-6 min-h-0 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="w-full lg:w-1/3 flex flex-col gap-4 min-h-0">
+        {integrations.length > 0 ? (
+          <Card className="glass-panel soft-diffused rounded-soft border-none p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Email Account
+                </p>
+                <p className="text-sm font-semibold text-charcoal">
+                  {integration
+                    ? getIntegrationLabel(
+                        integration,
+                        integrations.findIndex((item) => item.id === integration.id)
+                      )
+                    : "Select an account"}
+                </p>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full bg-white/70 text-slate-600 hover:bg-white"
+                    disabled={loadingIntegration || integrations.length === 0}
+                  >
+                    Switch
+                    <span className="material-symbols-outlined text-sm">
+                      expand_more
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64">
+                  <DropdownMenuLabel>Select account</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={activeIntegrationId ?? ""}
+                    onValueChange={(value) => setActiveIntegrationId(value)}
+                  >
+                    {integrations.map((item, index) => (
+                      <DropdownMenuRadioItem
+                        key={item.id}
+                        value={item.id}
+                        className="text-sm"
+                      >
+                        {getIntegrationLabel(item, index)}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </Card>
+        ) : null}
+
         {integrationUnavailable ? (
           <Card className="glass-panel soft-diffused rounded-soft border-none p-5">
             <div className="flex items-start gap-4">
@@ -468,7 +576,7 @@ export default function EmailPage() {
                 <Card
                   key={email.id}
                   className={cn(
-                    "glass-panel soft-diffused p-4 rounded-soft cursor-pointer transition-all border-none",
+                    "glass-panel soft-diffused p-6 min-h-[170px] rounded-soft cursor-pointer transition-all border-none",
                     isSelected
                       ? "bg-white/80 ring-2 ring-salmon/10 shadow-lg"
                       : "bg-white/40 hover:bg-white/60",
@@ -478,52 +586,31 @@ export default function EmailPage() {
                   )}
                   onClick={() => setSelectedId(email.id)}
                 >
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="flex items-center gap-2">
-                      {isUnread ? (
-                        <span className="w-2 h-2 rounded-full bg-salmon shadow-[0_0_8px_rgba(251,113,133,0.5)]" />
-                      ) : (
-                        <span className="w-2 h-2 rounded-full opacity-0" />
-                      )}
-                      <p className="text-xs font-extrabold text-charcoal">
-                        {name}
-                      </p>
-                    </div>
-                    <p className="text-[9px] font-medium text-slate-400 uppercase">
-                      {formatListDate(email.date)}
+                  <div className="flex items-center gap-2 mb-2">
+                    {isUnread ? (
+                      <span className="w-2 h-2 rounded-full bg-salmon shadow-[0_0_8px_rgba(251,113,133,0.5)]" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full opacity-0" />
+                    )}
+                    <p className="text-sm font-semibold text-charcoal">
+                      {name}
+                    </p>
+                    <span className="text-xs text-slate-400">-</span>
+                    <p className="text-xs font-medium text-slate-400">
+                      {formatListDateTime(email.date)}
                     </p>
                   </div>
-                  <p className="text-[11px] font-bold text-slate-700 truncate mb-1">
+                  <p className="text-[15px] font-bold text-slate-700 truncate mb-2">
                     {email.subject || "(No subject)"}
                   </p>
                   <p
                     className={cn(
-                      "text-[10px] leading-relaxed line-clamp-2",
+                      "text-[13px] leading-relaxed line-clamp-3",
                       email.summary ? "text-slate-600" : "text-slate-400"
                     )}
                   >
                     {summaryLine}
                   </p>
-                  {isSelected ? (
-                    <>
-                      <p className="text-[10px] text-slate-500 line-clamp-1 leading-relaxed mt-2">
-                        {email.snippet || "No preview available."}
-                      </p>
-                      <div className="mt-3 flex justify-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="xs"
-                          className="rounded-full bg-white/80 text-[9px] font-black text-slate-600 shadow-sm hover:bg-white"
-                        >
-                          ACTIONS
-                          <span className="material-symbols-outlined text-[10px]">
-                            expand_more
-                          </span>
-                        </Button>
-                      </div>
-                    </>
-                  ) : null}
                 </Card>
               );
             })
@@ -610,18 +697,28 @@ export default function EmailPage() {
                       <h2 className="text-charcoal font-friendly text-xl font-bold">
                         {selectedEmail.subject || "(No subject)"}
                       </h2>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-xs font-bold text-slate-600">
-                          {senderName}
-                        </p>
-                        {senderEmail ? (
-                          <p className="text-[10px] text-slate-400">
-                            {senderEmail}
-                          </p>
+                      <div className="mt-2 space-y-1 text-[11px] text-slate-500">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-slate-600">
+                            From
+                          </span>
+                          <span>{senderName}</span>
+                          {senderEmail ? <span>{senderEmail}</span> : null}
+                        </div>
+                        {selectedEmail.to ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-slate-600">
+                              To
+                            </span>
+                            <span>{selectedEmail.to}</span>
+                          </div>
                         ) : null}
-                        <span className="text-[10px] text-slate-400">
-                          • {formatDetailDate(selectedEmail.date)}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-slate-600">
+                            Date
+                          </span>
+                          <span>{formatDetailDate(selectedEmail.date)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -649,35 +746,50 @@ export default function EmailPage() {
                   </div>
                 </div>
 
-                {summaryText ? (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-indigo-50/40 rounded-inner border border-indigo-100/50">
-                    <span className="material-symbols-outlined text-indigo-400 text-lg">
-                      auto_awesome
+                <div
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-inner border",
+                    summaryText
+                      ? "bg-indigo-50/70 border-indigo-200/60 shadow-sm"
+                      : "bg-slate-50/60 border-slate-200/50"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "material-symbols-outlined text-lg",
+                      summaryText ? "text-indigo-400" : "text-slate-400"
+                    )}
+                  >
+                    auto_awesome
+                  </span>
+                  <p
+                    className={cn(
+                      "text-[11px] font-medium",
+                      summaryText ? "text-slate-600" : "text-slate-500"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "font-bold uppercase text-[9px] mr-1",
+                        summaryText ? "text-indigo-600" : "text-slate-500"
+                      )}
+                    >
+                      AI Briefing:
                     </span>
-                    <p className="text-[11px] text-slate-600 font-medium">
-                      <span className="text-indigo-600 font-bold uppercase text-[9px] mr-1">
-                        AI Briefing:
-                      </span>
-                      {summaryText}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-slate-50/60 rounded-inner border border-slate-200/50">
-                    <span className="material-symbols-outlined text-slate-400 text-lg">
-                      auto_awesome
-                    </span>
-                    <p className="text-[11px] text-slate-500 font-medium">
-                      <span className="text-slate-500 font-bold uppercase text-[9px] mr-1">
-                        AI Briefing:
-                      </span>
-                      Summaries are unavailable for this message.
-                    </p>
-                  </div>
-                )}
+                    {summaryText || "Summaries are unavailable for this message."}
+                  </p>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto no-scrollbar p-8">
                 <div className="max-w-2xl space-y-4">
+                  <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                    <span className="material-symbols-outlined text-sm">
+                      mail
+                    </span>
+                    Message
+                  </div>
+                  <Separator className="my-3 bg-white/50" />
                   {bodyParagraphs.length ? (
                     bodyParagraphs.map((paragraph, index) => (
                       <p
