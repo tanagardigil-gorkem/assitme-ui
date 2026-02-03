@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IntegrationConfigDialog } from "@/components/integrations/IntegrationConfigDialog";
 import { cn } from "@/lib/utils";
 import {
   ApiError,
@@ -15,10 +16,15 @@ import {
   disconnectIntegration,
   getAvailableIntegrations,
   getMyIntegrations,
+  updateIntegration,
 } from "@/app/lib/integrations/api";
 import { buildIntegrationCards } from "@/app/lib/integrations/merge";
 import { primaryActionLabel, statusLabel } from "@/app/lib/integrations/status";
-import type { IntegrationCardState, IntegrationCategory } from "@/app/lib/types";
+import type {
+  Integration,
+  IntegrationCardState,
+  IntegrationCategory,
+} from "@/app/lib/types";
 
 const CATEGORY_FILTERS: Array<{ label: string; value: IntegrationCategory }> = [
   { label: "All Apps", value: "all" },
@@ -59,16 +65,25 @@ const STATUS_TONES: Record<
   },
 };
 
-function Toggle({ on, disabled }: { on: boolean; disabled?: boolean }) {
+function Toggle({
+  on,
+  disabled,
+  onToggle,
+}: {
+  on: boolean;
+  disabled?: boolean;
+  onToggle?: () => void;
+}) {
   return (
     <button
       type="button"
       aria-pressed={on}
       aria-disabled={disabled}
+      onClick={disabled ? undefined : onToggle}
       className={cn(
         "relative inline-flex h-6 w-11 items-center rounded-full transition",
         on ? "bg-teal-400" : "bg-slate-200",
-        disabled ? "opacity-50 cursor-not-allowed" : "cursor-default"
+        disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
       )}
     >
       <span
@@ -88,7 +103,7 @@ function normalizeQuery(value: string) {
 function getErrorMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.status === 401 || error.status === 403) {
-      return "Backend denied the request (401/403). Check API URL or backend auth settings.";
+      return "Your session has expired. Please refresh the page.";
     }
     if (error.status === 429) {
       return "You are making requests too quickly. Please try again shortly.";
@@ -110,7 +125,11 @@ export default function ConnectionsPage() {
   const [loading, setLoading] = React.useState(true);
   const [actionBusy, setActionBusy] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-  const [availableLoaded, setAvailableLoaded] = React.useState(false);
+  const [integrationsByProvider, setIntegrationsByProvider] = React.useState<
+    Record<string, Integration>
+  >({});
+  const [configOpen, setConfigOpen] = React.useState(false);
+  const [configProvider, setConfigProvider] = React.useState<string | null>(null);
   const showSkeleton = loading && cards.length === 0;
 
   const refreshIntegrations = React.useCallback(async () => {
@@ -125,8 +144,13 @@ export default function ConnectionsPage() {
         availableResult.status === "fulfilled" ? availableResult.value : [];
       const mine = mineResult.status === "fulfilled" ? mineResult.value : [];
 
-      setAvailableLoaded(availableResult.status === "fulfilled");
       setCards(buildIntegrationCards(available, mine));
+      setIntegrationsByProvider(
+        mine.reduce<Record<string, Integration>>((acc, integration) => {
+          acc[integration.provider_type] = integration;
+          return acc;
+        }, {})
+      );
 
       if (
         availableResult.status === "rejected" ||
@@ -168,10 +192,7 @@ export default function ConnectionsPage() {
   }, [cards, search, category]);
 
   const handlePrimaryAction = async (card: IntegrationCardState) => {
-    const canAct =
-      card.enabled ||
-      (!availableLoaded && card.provider_type === "gmail" && !card.comingSoon);
-    if (!canAct || card.comingSoon) return;
+    if (!card.enabled || card.comingSoon) return;
     if (card.provider_type !== "gmail") {
       setError("This integration is not yet supported.");
       return;
@@ -179,7 +200,12 @@ export default function ConnectionsPage() {
 
     const label = primaryActionLabel(card.status);
     if (label === "Configure") {
-      setError("Configuration options are coming soon.");
+      if (!card.integrationId) {
+        setError("Connect Gmail before configuring it.");
+        return;
+      }
+      setConfigProvider(card.provider_type);
+      setConfigOpen(true);
       return;
     }
 
@@ -213,8 +239,52 @@ export default function ConnectionsPage() {
     }
   };
 
+  const handleToggle = async (card: IntegrationCardState, nextOn: boolean) => {
+    if (!card.integrationId) return;
+    if (!card.enabled || card.comingSoon) return;
+
+    setActionBusy(card.provider_type);
+    setError(null);
+    try {
+      await updateIntegration(card.integrationId, {
+        status: nextOn ? "active" : "disconnected",
+      });
+      await refreshIntegrations();
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionBusy(null);
+    }
+  };
+
   const requestNewIntegration = () => {
     window.open("https://your-form-url.example.com", "_blank");
+  };
+
+  const activeIntegration =
+    configProvider ? integrationsByProvider[configProvider] ?? null : null;
+
+  const handleSaveConfig = async (config: {
+    query?: string;
+    label_ids?: string[];
+    max_results?: number;
+  }) => {
+    if (!activeIntegration) {
+      setError("Connect Gmail before configuring it.");
+      return;
+    }
+
+    setActionBusy(activeIntegration.provider_type);
+    setError(null);
+    try {
+      await updateIntegration(activeIntegration.id, { config });
+      await refreshIntegrations();
+      setConfigOpen(false);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setActionBusy(null);
+    }
   };
 
   return (
@@ -293,13 +363,10 @@ export default function ConnectionsPage() {
               card.status === "active" ||
               card.status === "expired" ||
               card.status === "error";
-            const fallbackEnabled =
-              !availableLoaded &&
-              card.provider_type === "gmail" &&
-              !card.comingSoon;
-            const canAct = card.enabled || fallbackEnabled;
             const actionDisabled =
-              !canAct || card.comingSoon || actionBusy === card.provider_type;
+              !card.enabled || card.comingSoon || actionBusy === card.provider_type;
+            const toggleDisabled =
+              actionDisabled || !card.integrationId || actionBusy === card.provider_type;
 
             return (
               <Card
@@ -314,7 +381,11 @@ export default function ConnectionsPage() {
                   <div className="h-12 w-12 rounded-2xl bg-white/70 flex items-center justify-center text-slate-500 shadow-sm">
                     {card.icon}
                   </div>
-                  <Toggle on={toggleOn} disabled={!canAct} />
+                  <Toggle
+                    on={toggleOn}
+                    disabled={toggleDisabled}
+                    onToggle={() => handleToggle(card, !toggleOn)}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -395,6 +466,14 @@ export default function ConnectionsPage() {
           Request New Integration
         </Button>
       </div>
+
+      <IntegrationConfigDialog
+        open={configOpen}
+        onOpenChange={setConfigOpen}
+        integration={activeIntegration}
+        loading={actionBusy === activeIntegration?.provider_type}
+        onSave={handleSaveConfig}
+      />
     </div>
   );
 }

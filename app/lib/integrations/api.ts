@@ -77,3 +77,23 @@ export async function disconnectIntegration(integrationId: string): Promise<void
     throw new ApiError(message, res.status);
   }
 }
+
+export async function updateIntegration(
+  integrationId: string,
+  update: {
+    status?: "active" | "disconnected";
+    config?: {
+      query?: string;
+      label_ids?: string[];
+      max_results?: number;
+    };
+  }
+): Promise<Integration> {
+  return requestJson<Integration>(`/api/v1/integrations/${integrationId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(update),
+  });
+}

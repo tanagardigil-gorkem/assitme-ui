@@ -5,7 +5,7 @@ export const INTEGRATION_CATALOG: IntegrationCatalogItem[] = [
   {
     provider_type: "gmail",
     name: "Gmail",
-    description: "Read, draft, and manage emails.",
+    description: "Read and search emails.",
     category: "mail",
     icon: <Mail className="h-5 w-5" />,
     comingSoon: false,
