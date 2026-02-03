@@ -20,7 +20,7 @@ const navItems = [
     title: "Integrations",
     icon: "hub",
     color: "text-indigo-400",
-    href: "/connections",
+    href: "/integrations",
   },
   { title: "Projects", icon: "work", color: "text-indigo-400", href: "#" },
   { title: "Family", icon: "family_history", color: "text-teal-500", href: "#" },
